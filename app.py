@@ -81,7 +81,7 @@ years_lived = math.floor(delta_days / 365.25)
 # ==========================================
 st.title("📅 MY LIFE IN WEEKS")
 st.markdown("*Terinspirasi dari artikel Tim Urban 'Your Life in Weeks' di WaitButWhy.*")
-st.info(f"**Statistik Saat Ini:** Anda berusia {years_lived} tahun dan telah menjalani **{weeks_lived:,} minggu** dan **{delta_days:,} hari** dalam hidup Anda.")
+st.info(f"**Statistik Saat Ini:** Anda berusia {years_lived} tahun dan telah menjalani **{weeks_lived:,} minggu** atau **{delta_days:,} hari** dalam hidup Anda.")
 
 # Injeksi CSS Custom
 st.markdown("""
