@@ -84,9 +84,9 @@ week_left = max(0, total_weeks - weeks_lived)
 st.title("📅 MY LIFE IN WEEKS")
 st.markdown("*Terinspirasi dari artikel Tim Urban 'Your Life in Weeks' di WaitButWhy.*")
 st.success(
-    f"**Statistik Saat Ini:** Anda berusia `{years_lived} tahun` dan telah menjalani "
-    f"`{weeks_lived:,} minggu` atau `{delta_days:,} hari` dalam hidup Anda, "
-    f"tersisa `{week_left:,} minggu` menuju target usia `{target_age} tahun` anda."
+    f"**Statistik Saat Ini:** Anda berusia **`{years_lived} tahun`** dan telah menjalani "
+    f"**`{weeks_lived:,} minggu`** atau **`{delta_days:,} hari`** dalam hidup Anda, "
+    f"tersisa **`{week_left:,} minggu`** menuju target usia **`{target_age} tahun`** anda."
 )
 
 # Injeksi CSS Custom
