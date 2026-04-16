@@ -83,10 +83,38 @@ week_left = max(0, total_weeks - weeks_lived)
 # ==========================================
 st.title("📅 MY LIFE IN WEEKS")
 st.markdown("*Terinspirasi dari artikel Tim Urban 'Your Life in Weeks' di WaitButWhy.*")
-st.success(
-    f"**Statistik Saat Ini:** Anda berusia **`{years_lived} tahun`** dan telah menjalani "
-    f"**`{weeks_lived:,} minggu`** atau **`{delta_days:,} hari`** dalam hidup Anda, "
-    f"tersisa **`{week_left:,} minggu`** menuju target usia **`{target_age} tahun`** anda."
+st.markdown(
+    f"""
+    <div style="
+        background-color:#0f5132;
+        padding:15px;
+        border-radius:10px;
+        color:white;
+        font-size:16px;
+    ">
+        <b>Statistik Saat Ini:</b> Anda berusia 
+        <span style="background-color:#ffc107; color:black; padding:2px 6px; border-radius:5px;">
+            {years_lived} tahun
+        </span> 
+        dan telah menjalani 
+        <span style="background-color:#ffc107; color:black; padding:2px 6px; border-radius:5px;">
+            {weeks_lived:,} minggu
+        </span> 
+        atau 
+        <span style="background-color:#ffc107; color:black; padding:2px 6px; border-radius:5px;">
+            {delta_days:,} hari
+        </span> 
+        dalam hidup Anda, tersisa 
+        <span style="background-color:#ffc107; color:black; padding:2px 6px; border-radius:5px;">
+            {week_left:,} minggu
+        </span> 
+        menuju target usia 
+        <span style="background-color:#ffc107; color:black; padding:2px 6px; border-radius:5px;">
+            {target_age} tahun
+        </span>.
+    </div>
+    """,
+    unsafe_allow_html=True
 )
 
 # Injeksi CSS Custom
