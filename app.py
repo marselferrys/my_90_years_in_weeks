@@ -95,20 +95,16 @@ st.markdown(
         <b>Statistik Saat Ini:</b> Anda berusia 
         <span style="background-color:#ffc107; color:black; padding:2px 6px; border-radius:5px;">
             {years_lived} tahun
-        </span> 
-        dan telah menjalani 
+        </span>  dan telah menjalani 
         <span style="background-color:#ffc107; color:black; padding:2px 6px; border-radius:5px;">
             {weeks_lived:,} minggu
-        </span> 
-        atau 
+        </span>  atau 
         <span style="background-color:#ffc107; color:black; padding:2px 6px; border-radius:5px;">
             {delta_days:,} hari
-        </span> 
-        dalam hidup Anda, tersisa 
+        </span>  dalam hidup Anda, tersisa 
         <span style="background-color:#ffc107; color:black; padding:2px 6px; border-radius:5px;">
             {week_left:,} minggu
-        </span> 
-        menuju target usia 
+        </span>  menuju target usia 
         <span style="background-color:#ffc107; color:black; padding:2px 6px; border-radius:5px;">
             {target_age} tahun
         </span>.
