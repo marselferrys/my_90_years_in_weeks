@@ -31,7 +31,7 @@ try:
     # Membaca Sheet1 (Catatan Tahunan)
     df_gsheets_yearly = conn.read(worksheet="Sheet1", ttl=0)
     
-    # [FITUR BARU] Membaca Sheet2 (Catatan Mingguan)
+    # Membaca Sheet2 (Catatan Mingguan)
     try:
         df_gsheets_weekly = conn.read(worksheet="Sheet2", ttl=0)
     except:
@@ -54,7 +54,7 @@ if gsheets_connected:
             if umur is not None and umur in st.session_state.life_notes:
                 st.session_state.life_notes[umur] = "" if pd.isna(catatan) else str(catatan)
                 
-    # 2. [FITUR BARU] Load Data Mingguan
+    # 2. Load Data Mingguan
     if 'Minggu_Ke' in df_gsheets_weekly.columns and 'Catatan' in df_gsheets_weekly.columns:
         for _, row in df_gsheets_weekly.iterrows():
             minggu_idx = int(row['Minggu_Ke']) if pd.notna(row['Minggu_Ke']) else None
@@ -181,18 +181,41 @@ st.markdown(
 # ==========================================
 st.write("") 
 with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu"):
-    col_y, col_w, col_input, col_btn = st.columns([1, 1, 3, 1])
+    # Layout kolom diperbarui untuk menambahkan input tanggal (col_d)
+    col_d, col_y, col_w, col_input, col_btn = st.columns([1.5, 1, 1, 3, 1])
+    
+    with col_d:
+        # Fitur input tanggal, default menunjuk ke hari ini
+        selected_date = st.date_input("Pilih Tanggal:", value=date.today())
+        
+    # Kalkulasi otomatis untuk menemukan Tahun dan Minggu berdasarkan tanggal yang dipilih
+    delta_selected = (selected_date - birth_date).days
+    auto_abs_week = max(0, delta_selected // 7)
+    auto_year = min(target_age, auto_abs_week // 52) # Dibatasi agar tidak error jika melebihi target_age
+    auto_week = (auto_abs_week % 52) + 1
     
     with col_y:
-        edit_year = st.number_input("Tahun ke-", 0, target_age, years_lived)
+        # Nilai otomatis terisi dari kalkulasi tanggal di atas
+        edit_year = st.number_input("Tahun ke-", 0, target_age, int(auto_year))
     with col_w:
-        edit_week = st.number_input("Minggu ke-", 1, 52, (weeks_lived % 52) + 1)
+        # Nilai otomatis terisi dari kalkulasi tanggal di atas
+        edit_week = st.number_input("Minggu ke-", 1, 52, int(auto_week))
     
+    # Menghitung indeks absolut berdasarkan input tahun dan minggu
     abs_edit_idx = (edit_year * 52) + (edit_week - 1)
     current_weekly_note = st.session_state.weekly_notes.get(abs_edit_idx, "")
     
+    # Menghitung rentang tanggal pasti dari minggu yang sedang dipilih
+    w_start = birth_date + timedelta(weeks=abs_edit_idx)
+    w_end = w_start + timedelta(days=6)
+    
     with col_input:
+        # Kotak input catatan
         new_weekly_note = st.text_input("Tulis catatan untuk minggu ini:", value=current_weekly_note, label_visibility="collapsed")
+        
+        # Teks bantuan agar user tahu persis mereka sedang menulis di rentang tanggal berapa
+        st.caption(f"🗓️ Menulis untuk rentang: **{w_start.strftime('%d %b %Y')} - {w_end.strftime('%d %b %Y')}**")
+        
     with col_btn:
         if st.button("Simpan Catatan Mingguan", use_container_width=True):
             st.session_state.weekly_notes[abs_edit_idx] = new_weekly_note
