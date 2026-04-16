@@ -75,13 +75,15 @@ today = date.today()
 delta_days = (today - birth_date).days
 weeks_lived = max(0, delta_days // 7)
 years_lived = math.floor(delta_days / 365.25)
+total_weeks = target_age * 52
+week_left = max(0, total_weeks - weeks_lived) 
 
 # ==========================================
 # TAMPILAN UTAMA & CSS
 # ==========================================
 st.title("📅 MY LIFE IN WEEKS")
 st.markdown("*Terinspirasi dari artikel Tim Urban 'Your Life in Weeks' di WaitButWhy.*")
-st.info(f"**Statistik Saat Ini:** Anda berusia {years_lived} tahun dan telah menjalani **{weeks_lived:,} minggu** atau **{delta_days:,} hari** dalam hidup Anda.")
+st.info(f"**Statistik Saat Ini:** Anda berusia {years_lived} tahun dan telah menjalani **{weeks_lived:,} minggu** atau **{delta_days:,} hari** dalam hidup Anda, tersisa **{week_left}** minggu menuju target **{target_age}** usia anda")
 
 # Injeksi CSS Custom
 st.markdown("""
