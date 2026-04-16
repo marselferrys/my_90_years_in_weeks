@@ -65,6 +65,22 @@ with st.sidebar:
                 conn.update(worksheet="Sheet1", data=df_to_save)
                 st.cache_data.clear()
                 st.success("Data berhasil disimpan ke Google Sheets!")
+
+        # Tombol untuk pull data dari cloud 
+        if st.button("🔄 Update Catatan dari Cloud", use_container_width=True):
+            with st.spinner("Mengambil data terbaru..."):
+                st.cache_data.clear() # Membersihkan cache memori Streamlit
+                df_latest = conn.read(worksheet="Sheet1", ttl=0) # Membaca data segar dari Sheets
+                
+                # Memperbarui session_state dengan data terbaru
+                if 'Umur' in df_latest.columns and 'Catatan' in df_latest.columns:
+                    for _, row in df_latest.iterrows():
+                        umur = int(row['Umur']) if pd.notna(row['Umur']) else None
+                        catatan = row['Catatan']
+                        if umur is not None and umur in st.session_state.life_notes:
+                            st.session_state.life_notes[umur] = "" if pd.isna(catatan) else str(catatan)
+                    
+                    st.success("Data berhasil diupdate dari Google Sheets!")
     else:
         st.warning("Koneksi Google Sheets belum diatur.")
 
