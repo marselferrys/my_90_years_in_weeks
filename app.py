@@ -150,7 +150,7 @@ weeks_lived = max(0, delta_days // 7)
 years_lived = math.floor(delta_days / 365.25)
 total_weeks = target_age * 52
 week_left = max(0, total_weeks - weeks_lived) 
-
+day_left = max(0, int((target_age * 365.25) - delta_days))
 days_into_current_week = delta_days % 7 
 percent_current_week = (days_into_current_week / 7) * 100 
 
@@ -179,8 +179,13 @@ st.markdown(
             {delta_days:,} hari
         </span>  dalam hidup Anda, tersisa 
         <span style="background-color:#ffc107; color:black; padding:2px 6px; border-radius:5px;">
-            {week_left:,} minggu
-        </span>  menuju target usia 
+            {week_left:,} minggu 
+        </span>  
+        atau
+        <span style="background-color:#ffc107; color:black; padding:2px 6px; border-radius:5px;">
+            {day_left:,} hari 
+        </span>
+        menuju target usia 
         <span style="background-color:#ffc107; color:black; padding:2px 6px; border-radius:5px;">
             {target_age} tahun
         </span>.
