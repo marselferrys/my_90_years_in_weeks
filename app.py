@@ -91,7 +91,12 @@ if gsheets_connected and not st.session_state.data_loaded:
 with st.sidebar:
     st.header("⚙️ Konfigurasi Kalender")
     # birth_date = st.date_input("Tanggal Lahir:", value=date(2003, 3, 22), max_value=date.today())
-    birth_date = st.date_input("Tanggal Lahir:", value=date(2003, 3, 22))
+    birth_date = st.date_input(
+        "Tanggal Lahir:", 
+        value=date(2003, 3, 22),
+        min_value=date(1900, 1, 1),
+        max_value=date(2100, 12, 31)
+    )
     target_age = st.number_input("Target Umur (Tahun):", min_value=1, max_value=100, value=90)
     
     st.divider()
