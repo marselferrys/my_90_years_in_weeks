@@ -97,6 +97,15 @@ with st.sidebar:
         min_value=date(1900, 1, 1),
         max_value=date(2100, 12, 31)
     )
+
+    # Tanggal acuan untuk menghitung umur dan progress grid
+    target_date = st.date_input(
+        "Tanggal Acuan (Simulasi):", 
+        value=date.today(),
+        min_value=date(1900, 1, 1),
+        max_value=date(2100, 12, 31)
+    )
+    
     target_age = st.number_input("Target Umur (Tahun):", min_value=1, max_value=100, value=90)
     
     st.divider()
@@ -150,15 +159,20 @@ with st.sidebar:
 # ==========================================
 # LOGIKA PERHITUNGAN UMUR
 # ==========================================
-today = date.today()
-delta_days = (today - birth_date).days
-weeks_lived = max(0, delta_days // 7)
+# Menggunakan target_date dari sidebar
+raw_delta_days = (target_date - birth_date).days
+
+# Cegah angka minus jika tanggal lahir lebih besar dari tanggal acuan
+delta_days = max(0, raw_delta_days)
+
+weeks_lived = delta_days // 7
 years_lived = math.floor(delta_days / 365.25)
 total_weeks = target_age * 52
 week_left = max(0, total_weeks - weeks_lived) 
 day_left = max(0, int((target_age * 365.25) - delta_days))
+
 days_into_current_week = delta_days % 7 
-percent_current_week = (days_into_current_week / 7) * 100 
+percent_current_week = (days_into_current_week / 7) * 100
 
 # ==========================================
 # TAMPILAN UTAMA & CSS
