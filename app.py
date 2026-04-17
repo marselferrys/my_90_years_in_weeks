@@ -23,11 +23,11 @@ if 'life_notes' not in st.session_state:
 if 'weekly_notes' not in st.session_state:
     st.session_state.weekly_notes = {}
     
-# [FITUR BARU] State untuk catatan harian
+# State untuk catatan harian
 if 'daily_notes' not in st.session_state:
     st.session_state.daily_notes = {}
 
-# [FITUR BARU] Flag penanda agar tidak terus-menerus menarik data dari Google API
+# Flag penanda agar tidak terus-menerus menarik data dari Google API
 if 'data_loaded' not in st.session_state:
     st.session_state.data_loaded = False
 
@@ -43,7 +43,7 @@ try:
     except:
         df_gsheets_weekly = pd.DataFrame() 
         
-    # [FITUR BARU] Membaca Sheet3 (Catatan Harian)
+    # Membaca Sheet3 (Catatan Harian)
     try:
         df_gsheets_daily = conn.read(worksheet="Sheet3", ttl=600)
     except:
@@ -90,7 +90,8 @@ if gsheets_connected and not st.session_state.data_loaded:
 # ==========================================
 with st.sidebar:
     st.header("⚙️ Konfigurasi Kalender")
-    birth_date = st.date_input("Tanggal Lahir:", value=date(2003, 3, 22), max_value=date.today())
+    # birth_date = st.date_input("Tanggal Lahir:", value=date(2003, 3, 22), max_value=date.today())
+    birth_date = st.date_input("Tanggal Lahir:", value=date(2003, 3, 22))
     target_age = st.number_input("Target Umur (Tahun):", min_value=1, max_value=100, value=90)
     
     st.divider()
@@ -101,7 +102,7 @@ with st.sidebar:
         
         if st.button("💾 Simpan Catatan ke Cloud", type="primary", use_container_width=True):
             with st.spinner("Menyimpan & Membersihkan data lama di Sheet1, Sheet2, Sheet3..."):
-                # [PERBAIKAN FITUR HAPUS] Menyaring nilai kosong (="") agar ikut terhapus dari GSheets
+                # Menyaring nilai kosong (="") agar ikut terhapus dari GSheets
                 
                 df_to_save_yearly = pd.DataFrame(
                     [(k, v) for k, v in st.session_state.life_notes.items() if str(v).strip() != ""], 
