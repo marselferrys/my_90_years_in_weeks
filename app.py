@@ -27,21 +27,25 @@ if 'weekly_notes' not in st.session_state:
 if 'daily_notes' not in st.session_state:
     st.session_state.daily_notes = {}
 
+# [FITUR BARU] Flag penanda agar tidak terus-menerus menarik data dari Google API
+if 'data_loaded' not in st.session_state:
+    st.session_state.data_loaded = False
+
 # ==========================================
 # KONEKSI KE GOOGLE SHEETS
 # ==========================================
 try:
     conn = st.connection("gsheets", type=GSheetsConnection)
-    df_gsheets_yearly = conn.read(worksheet="Sheet1", ttl=0)
+    df_gsheets_yearly = conn.read(worksheet="Sheet1", ttl=600)
     
     try:
-        df_gsheets_weekly = conn.read(worksheet="Sheet2", ttl=0)
+        df_gsheets_weekly = conn.read(worksheet="Sheet2", ttl=600)
     except:
         df_gsheets_weekly = pd.DataFrame() 
         
     # [FITUR BARU] Membaca Sheet3 (Catatan Harian)
     try:
-        df_gsheets_daily = conn.read(worksheet="Sheet3", ttl=0)
+        df_gsheets_daily = conn.read(worksheet="Sheet3", ttl=600)
     except:
         df_gsheets_daily = pd.DataFrame()
 
@@ -53,7 +57,7 @@ except Exception as e:
     df_gsheets_weekly = pd.DataFrame()
     df_gsheets_daily = pd.DataFrame()
 
-if gsheets_connected:
+if gsheets_connected and not st.session_state.data_loaded:
     # Load Data Tahunan
     if 'Umur' in df_gsheets_yearly.columns and 'Catatan' in df_gsheets_yearly.columns:
         for _, row in df_gsheets_yearly.iterrows():
@@ -70,13 +74,16 @@ if gsheets_connected:
             if minggu_idx is not None:
                 st.session_state.weekly_notes[minggu_idx] = "" if pd.isna(catatan) else str(catatan)
                 
-    # [FITUR BARU] Load Data Harian
+    # Load Data Harian
     if 'Tanggal' in df_gsheets_daily.columns and 'Catatan' in df_gsheets_daily.columns:
         for _, row in df_gsheets_daily.iterrows():
             tanggal_str = str(row['Tanggal']) if pd.notna(row['Tanggal']) else None
             catatan = row['Catatan']
             if tanggal_str is not None:
                 st.session_state.daily_notes[tanggal_str] = "" if pd.isna(catatan) else str(catatan)
+
+    # Tandai bahwa data sudah berhasil ditarik dan dimasukkan ke memori lokal
+    st.session_state.data_loaded = True
 
 # ==========================================
 # TAMPILAN SIDEBAR
@@ -120,39 +127,17 @@ with st.sidebar:
                 st.cache_data.clear()
                 st.success("Seluruh data berhasil disimpan ke Google Sheets!")
 
+        # Tombol untuk pull data dari cloud 
         if st.button("🔄 Update Catatan dari Cloud", use_container_width=True):
-            with st.spinner("Mengambil data terbaru..."):
+            with st.spinner("Mengambil data terbaru dari Google Sheets..."):
+                # 1. Bersihkan cache koneksi agar Streamlit melupakan data yang lama
                 st.cache_data.clear() 
                 
-                df_latest_yearly = conn.read(worksheet="Sheet1", ttl=0) 
-                if 'Umur' in df_latest_yearly.columns and 'Catatan' in df_latest_yearly.columns:
-                    for _, row in df_latest_yearly.iterrows():
-                        umur = int(row['Umur']) if pd.notna(row['Umur']) else None
-                        catatan = row['Catatan']
-                        if umur is not None and umur in st.session_state.life_notes:
-                            st.session_state.life_notes[umur] = "" if pd.isna(catatan) else str(catatan)
+                # 2. Kembalikan flag menjadi False, agar blok loading di atas dieksekusi ulang
+                st.session_state.data_loaded = False 
                 
-                try:
-                    df_latest_weekly = conn.read(worksheet="Sheet2", ttl=0)
-                    if 'Minggu_Ke' in df_latest_weekly.columns and 'Catatan' in df_latest_weekly.columns:
-                        for _, row in df_latest_weekly.iterrows():
-                            minggu_idx = int(row['Minggu_Ke']) if pd.notna(row['Minggu_Ke']) else None
-                            catatan = row['Catatan']
-                            if minggu_idx is not None:
-                                st.session_state.weekly_notes[minggu_idx] = "" if pd.isna(catatan) else str(catatan)
-                except: pass
-                
-                try:
-                    df_latest_daily = conn.read(worksheet="Sheet3", ttl=0)
-                    if 'Tanggal' in df_latest_daily.columns and 'Catatan' in df_latest_daily.columns:
-                        for _, row in df_latest_daily.iterrows():
-                            tanggal_str = str(row['Tanggal']) if pd.notna(row['Tanggal']) else None
-                            catatan = row['Catatan']
-                            if tanggal_str is not None:
-                                st.session_state.daily_notes[tanggal_str] = "" if pd.isna(catatan) else str(catatan)
-                except: pass
-                    
-                st.success("Data berhasil diupdate dari Google Sheets!")
+                # 3. Refresh (jalankan ulang) aplikasi dari baris pertama
+                st.rerun()
     else:
         st.warning("Koneksi Google Sheets belum diatur.")
 
