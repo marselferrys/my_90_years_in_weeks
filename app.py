@@ -301,10 +301,12 @@ st.markdown("""
     }
     .daily-container {
         display: flex;
-        gap: 8px;
+        gap: 10px; /* Jarak antar kotak sedikit dilebarkan agar lebih rapi */
         align-items: center;
-        margin-top: 15px;
-        justify-content: center;
+        justify-content: center; /* Membuat kotak berada persis di tengah */
+        margin-top: 20px;
+        margin-bottom: 15px; /* Memberikan jarak dengan garis di bawahnya */
+        padding-bottom: 5px;
     }
     .daily-box {
         width: 35px;
