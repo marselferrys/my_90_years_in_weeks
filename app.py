@@ -22,31 +22,39 @@ if 'life_notes' not in st.session_state:
     
 if 'weekly_notes' not in st.session_state:
     st.session_state.weekly_notes = {}
+    
+# [FITUR BARU] State untuk catatan harian
+if 'daily_notes' not in st.session_state:
+    st.session_state.daily_notes = {}
 
 # ==========================================
 # KONEKSI KE GOOGLE SHEETS
 # ==========================================
 try:
     conn = st.connection("gsheets", type=GSheetsConnection)
-    # Membaca Sheet1 (Catatan Tahunan)
     df_gsheets_yearly = conn.read(worksheet="Sheet1", ttl=0)
     
-    # Membaca Sheet2 (Catatan Mingguan)
     try:
         df_gsheets_weekly = conn.read(worksheet="Sheet2", ttl=0)
     except:
-        df_gsheets_weekly = pd.DataFrame() # Jika Sheet2 belum dibuat, abaikan tanpa error
+        df_gsheets_weekly = pd.DataFrame() 
         
+    # [FITUR BARU] Membaca Sheet3 (Catatan Harian)
+    try:
+        df_gsheets_daily = conn.read(worksheet="Sheet3", ttl=0)
+    except:
+        df_gsheets_daily = pd.DataFrame()
+
     gsheets_connected = True
 except Exception as e:
     st.error(f"Gagal terhubung ke Google Sheets. Pastikan secrets.toml sudah benar. Error: {e}")
     gsheets_connected = False
     df_gsheets_yearly = pd.DataFrame()
     df_gsheets_weekly = pd.DataFrame()
+    df_gsheets_daily = pd.DataFrame()
 
-# Memasukkan data dari GSheets ke session_state saat pertama kali dimuat
 if gsheets_connected:
-    # 1. Load Data Tahunan
+    # Load Data Tahunan
     if 'Umur' in df_gsheets_yearly.columns and 'Catatan' in df_gsheets_yearly.columns:
         for _, row in df_gsheets_yearly.iterrows():
             umur = int(row['Umur']) if pd.notna(row['Umur']) else None
@@ -54,13 +62,21 @@ if gsheets_connected:
             if umur is not None and umur in st.session_state.life_notes:
                 st.session_state.life_notes[umur] = "" if pd.isna(catatan) else str(catatan)
                 
-    # 2. Load Data Mingguan
+    # Load Data Mingguan
     if 'Minggu_Ke' in df_gsheets_weekly.columns and 'Catatan' in df_gsheets_weekly.columns:
         for _, row in df_gsheets_weekly.iterrows():
             minggu_idx = int(row['Minggu_Ke']) if pd.notna(row['Minggu_Ke']) else None
             catatan = row['Catatan']
             if minggu_idx is not None:
                 st.session_state.weekly_notes[minggu_idx] = "" if pd.isna(catatan) else str(catatan)
+                
+    # [FITUR BARU] Load Data Harian
+    if 'Tanggal' in df_gsheets_daily.columns and 'Catatan' in df_gsheets_daily.columns:
+        for _, row in df_gsheets_daily.iterrows():
+            tanggal_str = str(row['Tanggal']) if pd.notna(row['Tanggal']) else None
+            catatan = row['Catatan']
+            if tanggal_str is not None:
+                st.session_state.daily_notes[tanggal_str] = "" if pd.isna(catatan) else str(catatan)
 
 # ==========================================
 # TAMPILAN SIDEBAR
@@ -76,34 +92,38 @@ with st.sidebar:
     if gsheets_connected:
         st.success("Tersambung ke Google Sheets ✅")
         
-        # Tombol untuk push data ke cloud
         if st.button("💾 Simpan Catatan ke Cloud", type="primary", use_container_width=True):
-            with st.spinner("Menyimpan perubahan ke Sheet1 dan Sheet2..."):
-                # Simpan Tahunan ke Sheet1
+            with st.spinner("Menyimpan & Membersihkan data lama di Sheet1, Sheet2, Sheet3..."):
+                # [PERBAIKAN FITUR HAPUS] Menyaring nilai kosong (="") agar ikut terhapus dari GSheets
+                
                 df_to_save_yearly = pd.DataFrame(
-                    list(st.session_state.life_notes.items()), 
+                    [(k, v) for k, v in st.session_state.life_notes.items() if str(v).strip() != ""], 
                     columns=['Umur', 'Catatan']
                 )
                 conn.update(worksheet="Sheet1", data=df_to_save_yearly)
                 
-                # [FITUR BARU] Simpan Mingguan ke Sheet2
                 df_to_save_weekly = pd.DataFrame(
-                    list(st.session_state.weekly_notes.items()), 
+                    [(k, v) for k, v in st.session_state.weekly_notes.items() if str(v).strip() != ""], 
                     columns=['Minggu_Ke', 'Catatan']
                 )
-                # Menyimpan hanya jika ada catatan mingguan agar tidak error jika kosong
-                if not df_to_save_weekly.empty:
+                if not df_to_save_weekly.empty or len(st.session_state.weekly_notes) > 0:
                     conn.update(worksheet="Sheet2", data=df_to_save_weekly)
+                    
+                # Simpan Harian ke Sheet3
+                df_to_save_daily = pd.DataFrame(
+                    [(k, v) for k, v in st.session_state.daily_notes.items() if str(v).strip() != ""], 
+                    columns=['Tanggal', 'Catatan']
+                )
+                if not df_to_save_daily.empty or len(st.session_state.daily_notes) > 0:
+                    conn.update(worksheet="Sheet3", data=df_to_save_daily)
                 
                 st.cache_data.clear()
                 st.success("Seluruh data berhasil disimpan ke Google Sheets!")
 
-        # Tombol untuk pull data dari cloud 
         if st.button("🔄 Update Catatan dari Cloud", use_container_width=True):
             with st.spinner("Mengambil data terbaru..."):
                 st.cache_data.clear() 
                 
-                # Update Tahunan
                 df_latest_yearly = conn.read(worksheet="Sheet1", ttl=0) 
                 if 'Umur' in df_latest_yearly.columns and 'Catatan' in df_latest_yearly.columns:
                     for _, row in df_latest_yearly.iterrows():
@@ -112,7 +132,6 @@ with st.sidebar:
                         if umur is not None and umur in st.session_state.life_notes:
                             st.session_state.life_notes[umur] = "" if pd.isna(catatan) else str(catatan)
                 
-                # [FITUR BARU] Update Mingguan
                 try:
                     df_latest_weekly = conn.read(worksheet="Sheet2", ttl=0)
                     if 'Minggu_Ke' in df_latest_weekly.columns and 'Catatan' in df_latest_weekly.columns:
@@ -121,8 +140,17 @@ with st.sidebar:
                             catatan = row['Catatan']
                             if minggu_idx is not None:
                                 st.session_state.weekly_notes[minggu_idx] = "" if pd.isna(catatan) else str(catatan)
-                except:
-                    pass
+                except: pass
+                
+                try:
+                    df_latest_daily = conn.read(worksheet="Sheet3", ttl=0)
+                    if 'Tanggal' in df_latest_daily.columns and 'Catatan' in df_latest_daily.columns:
+                        for _, row in df_latest_daily.iterrows():
+                            tanggal_str = str(row['Tanggal']) if pd.notna(row['Tanggal']) else None
+                            catatan = row['Catatan']
+                            if tanggal_str is not None:
+                                st.session_state.daily_notes[tanggal_str] = "" if pd.isna(catatan) else str(catatan)
+                except: pass
                     
                 st.success("Data berhasil diupdate dari Google Sheets!")
     else:
@@ -177,49 +205,82 @@ st.markdown(
 )
 
 # ==========================================
-# EDITOR CATATAN MINGGUAN
+# EDITOR CATATAN MINGGUAN & HARIAN
 # ==========================================
 st.write("") 
-with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu"):
-    # Layout kolom diperbarui untuk menambahkan input tanggal (col_d)
-    col_d, col_y, col_w, col_input, col_btn = st.columns([1.5, 1, 1, 3, 1])
+with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded=True):
+    col_d, col_y, col_w = st.columns([1.5, 1, 1])
     
     with col_d:
-        # Fitur input tanggal, default menunjuk ke hari ini
-        selected_date = st.date_input("Pilih Tanggal:", value=date.today())
+        selected_date = st.date_input("Pilih Tanggal Acuan:", value=date.today())
         
-    # Kalkulasi otomatis untuk menemukan Tahun dan Minggu berdasarkan tanggal yang dipilih
     delta_selected = (selected_date - birth_date).days
     auto_abs_week = max(0, delta_selected // 7)
-    auto_year = min(target_age, auto_abs_week // 52) # Dibatasi agar tidak error jika melebihi target_age
+    auto_year = min(target_age, auto_abs_week // 52) 
     auto_week = (auto_abs_week % 52) + 1
     
     with col_y:
-        # Nilai otomatis terisi dari kalkulasi tanggal di atas
         edit_year = st.number_input("Tahun ke-", 0, target_age, int(auto_year))
     with col_w:
-        # Nilai otomatis terisi dari kalkulasi tanggal di atas
         edit_week = st.number_input("Minggu ke-", 1, 52, int(auto_week))
     
-    # Menghitung indeks absolut berdasarkan input tahun dan minggu
     abs_edit_idx = (edit_year * 52) + (edit_week - 1)
-    current_weekly_note = st.session_state.weekly_notes.get(abs_edit_idx, "")
-    
-    # Menghitung rentang tanggal pasti dari minggu yang sedang dipilih
     w_start = birth_date + timedelta(weeks=abs_edit_idx)
     w_end = w_start + timedelta(days=6)
     
-    with col_input:
-        # Kotak input catatan
-        new_weekly_note = st.text_input("Tulis catatan untuk minggu ini:", value=current_weekly_note, label_visibility="collapsed")
-        
-        # Teks bantuan agar user tahu persis mereka sedang menulis di rentang tanggal berapa
-        st.caption(f"🗓️ Menulis untuk rentang: **{w_start.strftime('%d %b %Y')} - {w_end.strftime('%d %b %Y')}**")
-        
-    with col_btn:
-        if st.button("Simpan Catatan Mingguan", use_container_width=True):
+    # 1. INPUT CATATAN MINGGUAN
+    st.markdown(f"**📌 Catatan Mingguan** *(Rentang: {w_start.strftime('%d %b')} - {w_end.strftime('%d %b %Y')})*")
+    current_weekly_note = st.session_state.weekly_notes.get(abs_edit_idx, "")
+    col_w_input, col_w_btn = st.columns([4, 1])
+    with col_w_input:
+        new_weekly_note = st.text_input("Tulis catatan minggu ini:", value=current_weekly_note, label_visibility="collapsed", key="w_note_input")
+    with col_w_btn:
+        if st.button("Simpan Mingguan", use_container_width=True):
             st.session_state.weekly_notes[abs_edit_idx] = new_weekly_note
-            st.success("Tersimpan!")
+            st.rerun()
+
+    st.divider()
+
+    # 2. INPUT CATATAN HARIAN [FITUR BARU]
+    st.markdown("**🗓️ Catatan Harian (Dalam Minggu Terpilih)**")
+    
+    day_options_str = [(w_start + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(7)]
+    display_options = [(w_start + timedelta(days=i)).strftime('%A, %d %b') for i in range(7)]
+    
+    col_d_sel, col_d_input, col_d_btn = st.columns([1.5, 2.5, 1])
+    with col_d_sel:
+        selected_day_idx = st.selectbox("Pilih Hari:", range(7), format_func=lambda x: display_options[x], label_visibility="collapsed")
+    
+    sel_day_str = day_options_str[selected_day_idx]
+    current_daily_note = st.session_state.daily_notes.get(sel_day_str, "")
+    
+    with col_d_input:
+        new_daily_note = st.text_input("Tulis catatan hari ini:", value=current_daily_note, label_visibility="collapsed", key="d_note_input")
+    with col_d_btn:
+        if st.button("Simpan Harian", use_container_width=True):
+            st.session_state.daily_notes[sel_day_str] = new_daily_note
+            st.rerun()
+
+    # 3. RENDER VISUAL 7 KOTAK HARI (KUNING)
+    daily_html = '<div class="daily-container">'
+    for i in range(7):
+        d_date = w_start + timedelta(days=i)
+        d_str = d_date.strftime('%Y-%m-%d')
+        d_note = st.session_state.daily_notes.get(d_str, "")
+        
+        tooltip = f"{d_date.strftime('%A, %d %b %Y')}"
+        if d_note: tooltip += f"&#10;📝 {d_note}"
+        
+        # Style kotak kuning
+        style = "background-color: #ffc107; border-color: #e0a800;"
+        if d_note: style += " border-width: 2px; border-color: #d32f2f;" # Border merah tebal jika ada catatan
+        if i == selected_day_idx: style += " opacity: 0.5;" # Redupkan sedikit untuk hari yang sedang dipilih
+        
+        daily_html += f'<div class="daily-box" style="{style}" title="{tooltip}"></div>'
+    daily_html += '</div>'
+    
+    st.markdown(daily_html, unsafe_allow_html=True)
+
 
 # Injeksi CSS Custom
 st.markdown("""
@@ -237,6 +298,24 @@ st.markdown("""
         border-radius: 2px;
         flex-shrink: 0; 
         cursor: pointer;
+    }
+    .daily-container {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-top: 15px;
+        justify-content: center;
+    }
+    .daily-box {
+        width: 35px;
+        height: 35px;
+        border-radius: 6px;
+        border: 1px solid solid;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    .daily-box:hover {
+        transform: scale(1.1);
     }
     .lived { background-color: #1f77b4; border-color: #1f77b4; }
     .future { background-color: #ffffff; }
@@ -260,7 +339,7 @@ st.divider()
 st.caption("Minggu 1 ➔ 52")
 
 # ==========================================
-# RENDER GRID KALENDER & TOMBOL CATATAN
+# RENDER GRID KALENDER & TOMBOL CATATAN TAHUNAN
 # ==========================================
 for year in range(target_age + 1):
     col_grid, col_action = st.columns([0.95, 0.05])
@@ -270,15 +349,15 @@ for year in range(target_age + 1):
         for week in range(52):
             current_week_idx = (year * 52) + week
             
-            w_start = birth_date + timedelta(weeks=current_week_idx)
-            w_end = w_start + timedelta(days=6)
-            date_str = f"{w_start.strftime('%d %b %Y')} - {w_end.strftime('%d %b %Y')}"
+            w_start_grid = birth_date + timedelta(weeks=current_week_idx)
+            w_end_grid = w_start_grid + timedelta(days=6)
+            date_str = f"{w_start_grid.strftime('%d %b %Y')} - {w_end_grid.strftime('%d %b %Y')}"
             
-            weekly_note = st.session_state.weekly_notes.get(current_week_idx, "")
+            weekly_note_grid = st.session_state.weekly_notes.get(current_week_idx, "")
             
             tooltip_text = f"Tahun {year}, Minggu {week + 1}&#10;📅 {date_str}"
-            if weekly_note:
-                tooltip_text += f"&#10;📝 {weekly_note}"
+            if weekly_note_grid:
+                tooltip_text += f"&#10;📝 {weekly_note_grid}"
 
             style = ""
             if current_week_idx < weeks_lived:
@@ -290,7 +369,7 @@ for year in range(target_age + 1):
             else:
                 status_class = "future"
                 
-            if weekly_note:
+            if weekly_note_grid:
                 style += " border-color: #ff9800; border-width: 2px;"
 
             weeks_html += f'<div class="week-box {status_class}" style="{style}" title="{tooltip_text}"></div>'
@@ -300,7 +379,7 @@ for year in range(target_age + 1):
     
     with col_action:
         current_note = st.session_state.life_notes[year]
-        hover_info = current_note if current_note.strip() != "" else "Belum ada catatan. Klik untuk menambah."
+        hover_info = current_note if current_note.strip() != "" else "Belum ada catatan."
         
         with st.popover("📝", help=hover_info):
             st.session_state.life_notes[year] = st.text_area(
