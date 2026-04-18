@@ -303,12 +303,10 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
 
     st.divider()
 
-    # 2. PICKER KOTAK HARIAN INTERAKTIF
+    # --- 2. PICKER KOTAK HARIAN INTERAKTIF ---
     st.markdown("**🗓️ Pilih Hari & Edit Catatan**")
     
-    now = datetime.now()
-    real_today = now.date()
-
+    real_today = datetime.now().date()
     day_cols = st.columns(7)
     custom_css = "<style>\n"
     
@@ -318,29 +316,23 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
         d_note = st.session_state.daily_notes.get(d_str, "")
         day_label = d_date.strftime('%a')
         
-        # --- LOGIKA WARNA SOLID ---
+        # Logika Warna (Solid Color Approach)
         if d_date <= real_today:
-            # Masa Lalu & Hari Ini: Kuning Solid
-            bg_color = "#ffc107"
+            bg_color = "#ffc107" # Past & Present: Kuning
             text_color = "black"
         else:
-            # Masa Depan: Abu-abu Gelap (Theme Match)
-            bg_color = "#262730"
+            bg_color = "#262730" # Future: Gelap
             text_color = "white"
             
-        # Logika Garis Tepi (Border)
+        # Logika Border
         if d_note != "":
-            # Merah jika ADA catatan
-            border_style = "2px solid #d32f2f" 
+            border_style = "2px solid #d32f2f" # Merah tebal jika ada catatan
         else:
-            # Standar jika KOSONG
             border_style = "1px solid #444444"
             
-        # Highlight Biru jika sedang dipilih/aktif
         if i == st.session_state.active_day_idx:
-            border_style = "2px solid #0d6efd" 
-
-        # CSS Injection menggunakan kelas unik agar tidak meleset
+            border_style = "2px solid #0d6efd" # Highlight Biru
+            
         unique_class = f"day-btn-{i}"
         custom_css += f"""
             div:has(> .{unique_class}) button {{
@@ -361,6 +353,29 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
                 
     custom_css += "</style>"
     st.markdown(custom_css, unsafe_allow_html=True)
+    
+    # --- 3. AREA INPUT OTOMATIS BERDASARKAN KOTAK YANG DIPILIH ---
+    selected_day_idx = st.session_state.active_day_idx
+    sel_day_date = w_start + timedelta(days=selected_day_idx)
+    sel_day_str = sel_day_date.strftime('%Y-%m-%d')
+    current_daily_note = st.session_state.daily_notes.get(sel_day_str, "")
+
+    st.caption(f"📍 Mengedit: **{sel_day_date.strftime('%A, %d %B %Y')}** (Tahun {edit_year}, Minggu {edit_week})")
+    
+    col_d_input, col_d_btn = st.columns([4, 1])
+    with col_d_input:
+        new_daily_note = st.text_input(
+            "Tulis catatan hari ini:", 
+            value=current_daily_note, 
+            label_visibility="collapsed", 
+            key=f"d_note_{sel_day_str}"
+        )
+    with col_d_btn:
+        if st.button("Simpan Harian", use_container_width=True, type="primary"):
+            st.session_state.daily_notes[sel_day_str] = new_daily_note
+            st.session_state.unsaved_changes = True
+            st.session_state.last_edit_time = time.time()
+            st.success("Tersimpan!")
 
 
 # Injeksi CSS Custom
