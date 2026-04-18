@@ -306,7 +306,7 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
     # 2. PICKER KOTAK HARIAN INTERAKTIF
     st.markdown("**🗓️ Pilih Hari & Edit Catatan**")
     
-    # Hitung data waktu untuk progress harian
+    # Hitung persentase detik yang sudah berlalu hari ini (untuk Load Bar)
     now = datetime.now()
     real_today = now.date()
     seconds_passed = (now.hour * 3600) + (now.minute * 60) + now.second
@@ -321,57 +321,50 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
         d_note = st.session_state.daily_notes.get(d_str, "")
         day_label = d_date.strftime('%a')
         
-        # --- LOGIKA VISUAL DINAMIS ---
-        # 1. Background (Past, Present, Future)
+        # --- LOGIKA STYLE LINEAR-GRADIENT (LOAD BAR) ---
         if d_date < real_today:
-            bg_style = "#ffc107" # Past: Kuning Penuh
+            # Hari Berlalu: Full Kuning
+            bg_style = "background: #ffc107"
             text_color = "black"
         elif d_date == real_today:
-            bg_style = f"linear-gradient(to right, #ffc107 {percent_current_day}%, #ffffff {percent_current_day}%)"
-            text_color = "black"
+            # HARI INI: Gradasi Load Bar (Kuning -> Abu-abu Gelap)
+            bg_style = f"background: linear-gradient(to right, #ffc107 {percent_current_day}%, #262730 {percent_current_day}%)"
+            text_color = "white" # Agar teks tetap terbaca di area gelap
         else:
-            bg_style = "#ffffff" # Future: Putih
-            text_color = "#444444"
+            # Masa Depan: Kosong / Abu-abu Gelap
+            bg_style = "background: #262730"
+            text_color = "white"
             
-        # 2. Border (Merah jika ada catatan)
+        # Logika Garis Tepi (Border)
         if d_note != "":
-            border_style = "2px solid #d32f2f" # Ada catatan
+            border_style = "2px solid #d32f2f" # Merah jika ada catatan
         else:
-            border_style = "1px solid #cccccc" if d_date > real_today else "1px solid #e0a800"
+            border_style = "1px solid #444444" # Standar
             
-        # 3. Highlight jika tombol diklik (Aktif)
-        box_shadow = "none"
+        # Highlight warna Biru jika tombol sedang diklik/aktif
         if i == st.session_state.active_day_idx:
-            border_style = "2px solid #0d6efd" # Override ke Biru saat diedit
-            box_shadow = "0px 0px 10px rgba(13, 110, 253, 0.6)"
+            border_style = "2px solid #0d6efd" 
             
-        # Injeksi CSS Spesifik untuk Kolom ini
+        # [INJEKSI CSS TANGGUH] Memaksa Streamlit menerapkan background gradient
         custom_css += f"""
-            div[data-testid="column"]:has(#marker_day_{i}) button {{
-                background: {bg_style} !important;
+            div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child({i+1}) button {{
+                {bg_style} !important;
                 color: {text_color} !important;
                 border: {border_style} !important;
-                box-shadow: {box_shadow} !important;
                 height: 45px !important;
                 font-weight: bold !important;
                 border-radius: 8px !important;
-                transition: transform 0.1s;
-            }}
-            div[data-testid="column"]:has(#marker_day_{i}) button:hover {{
-                transform: scale(1.05);
             }}
         """
         
         with day_cols[i]:
-            # Penanda (marker) rahasia agar CSS tahu tombol mana yang harus diwarnai
-            st.markdown(f'<span id="marker_day_{i}"></span>', unsafe_allow_html=True)
             if st.button(day_label, key=f"btn_day_{i}", use_container_width=True):
                 st.session_state.active_day_idx = i
                 st.rerun()
                 
     custom_css += "</style>"
     st.markdown(custom_css, unsafe_allow_html=True)
-
+    
     # 3. AREA INPUT OTOMATIS BERDASARKAN KOTAK YANG DIPILIH
     selected_day_idx = st.session_state.active_day_idx
     sel_day_date = w_start + timedelta(days=selected_day_idx)
