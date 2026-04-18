@@ -373,7 +373,7 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
         d_note = st.session_state.daily_notes.get(d_str, "")
         day_label = d_date.strftime('%a')
         
-        # Logika Warna (Solid Color Approach)
+        # Logika Warna Background (Past, Present, Future)
         if d_date <= real_today:
             bg_color = "#ffc107" # Past & Present: Kuning
             text_color = "black"
@@ -381,18 +381,33 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
             bg_color = "#262730" # Future: Gelap
             text_color = "white"
             
-        # Logika Border
-        if d_note != "":
-            border_style = "2px solid #d32f2f" # Merah tebal jika ada catatan
-        else:
-            border_style = "1px solid #444444"
-            
+        # Logika Border Standar & Aktif (Tidak lagi merah jika ada catatan)
+        border_style = "1px solid #444444"
         if i == st.session_state.active_day_idx:
-            border_style = "2px solid #0d6efd" # Highlight Biru
+            border_style = "2px solid #0d6efd" # Highlight Biru saat diklik
             
         unique_class = f"day-btn-{i}"
+        
+        # [FITUR BARU] Logika Titik Visual (Dot Indicator) di bawah teks
+        dot_css = ""
+        if d_note != "":
+            dot_css = f"""
+            div:has(> .{unique_class}) button::after {{
+                content: '';
+                position: absolute;
+                bottom: 4px; /* Jarak titik dari bawah kotak */
+                left: 50%;
+                transform: translateX(-50%);
+                width: 6px;
+                height: 6px;
+                background-color: #ff9800; /* Warna titik oranye senada dengan grid mingguan */
+                border-radius: 50%;
+            }}
+            """
+            
         custom_css += f"""
             div:has(> .{unique_class}) button {{
+                position: relative !important; /* Wajib agar titik tidak lari keluar kotak */
                 background-color: {bg_color} !important;
                 color: {text_color} !important;
                 border: {border_style} !important;
@@ -400,6 +415,7 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
                 font-weight: bold !important;
                 border-radius: 8px !important;
             }}
+            {dot_css}
         """
         
         with day_cols[i]:
@@ -411,7 +427,7 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
     custom_css += "</style>"
     st.markdown(custom_css, unsafe_allow_html=True)
     
-    # [FITUR BARU] Render Progress Bar Mingguan (Biru)
+    # Render Progress Bar Mingguan (Biru)
     # Progress bar ini dirender menggunakan HTML agar terlihat modern dan tipis
     st.markdown(
         f"""
@@ -538,9 +554,19 @@ for year in range(target_age + 1):
             
             weekly_note_grid = st.session_state.weekly_notes.get(current_week_idx, "")
             
+            # [FITUR BARU] Cek apakah ada catatan harian di dalam 7 hari pada minggu ini
+            has_daily_note_in_week = False
+            for d in range(7):
+                check_day_str = (w_start_grid + timedelta(days=d)).strftime('%Y-%m-%d')
+                if st.session_state.daily_notes.get(check_day_str, "").strip() != "":
+                    has_daily_note_in_week = True
+                    break # Jika ketemu 1 saja, langsung berhenti mencari agar performa tetap cepat
+            
             tooltip_text = f"Tahun {year}, Minggu {week + 1}&#10;📅 {date_str}"
             if weekly_note_grid:
-                tooltip_text += f"&#10;📝 {weekly_note_grid}"
+                tooltip_text += f"&#10;📝 Mingguan: {weekly_note_grid}"
+            if has_daily_note_in_week:
+                tooltip_text += f"&#10;📌 (Terdapat Catatan Harian)"
 
             style = ""
             if current_week_idx < weeks_lived:
@@ -552,14 +578,14 @@ for year in range(target_age + 1):
             else:
                 status_class = "future"
                 
-            if weekly_note_grid:
+            # [PERBAIKAN] Kotak menyala oranye jika ada catatan mingguan ATAU catatan harian
+            if weekly_note_grid or has_daily_note_in_week:
                 style += " border-color: #ff9800; border-width: 2px;"
 
             weeks_html += f'<div class="week-box {status_class}" style="{style}" title="{tooltip_text}"></div>'
             
         weeks_html += '</div>'
         st.markdown(weeks_html, unsafe_allow_html=True)
-    
     with col_action:
         current_note = st.session_state.life_notes[year]
         hover_info = current_note if current_note.strip() != "" else "Belum ada catatan."
