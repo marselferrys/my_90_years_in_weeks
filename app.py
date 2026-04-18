@@ -306,7 +306,7 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
     # 2. PICKER KOTAK HARIAN INTERAKTIF
     st.markdown("**🗓️ Pilih Hari & Edit Catatan**")
     
-    # Hitung persentase detik yang sudah berlalu hari ini (untuk Load Bar)
+    # Hitung data waktu untuk progress harian
     now = datetime.now()
     real_today = now.date()
     seconds_passed = (now.hour * 3600) + (now.minute * 60) + now.second
@@ -321,36 +321,37 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
         d_note = st.session_state.daily_notes.get(d_str, "")
         day_label = d_date.strftime('%a')
         
-        # --- LOGIKA STYLE LINEAR-GRADIENT (LOAD BAR) ---
+        # --- LOGIKA VISUAL DINAMIS ---
         if d_date < real_today:
-            # Hari Berlalu: Full Kuning
-            bg_style = "background: #ffc107"
-            text_color = "black"
+            bg_style = "background: #ffc107;" # Masa lalu (Kuning Penuh)
+            text_color = "color: black;"
         elif d_date == real_today:
-            # HARI INI: Gradasi Load Bar (Kuning -> Abu-abu Gelap)
-            bg_style = f"background: linear-gradient(to right, #ffc107 {percent_current_day}%, #262730 {percent_current_day}%)"
-            text_color = "white" # Agar teks tetap terbaca di area gelap
+            bg_style = f"background: linear-gradient(to right, #ffc107 {percent_current_day}%, #262730 {percent_current_day}%);" # Hari ini (Gradasi)
+            text_color = "color: white;"
         else:
-            # Masa Depan: Kosong / Abu-abu Gelap
-            bg_style = "background: #262730"
-            text_color = "white"
+            bg_style = "background: #262730;" # Masa depan (Abu-abu Gelap)
+            text_color = "color: white;"
             
-        # Logika Garis Tepi (Border)
+        # Logika Border
         if d_note != "":
-            border_style = "2px solid #d32f2f" # Merah jika ada catatan
+            border_style = "border: 2px solid #d32f2f;" # Merah jika ada catatan
         else:
-            border_style = "1px solid #444444" # Standar
+            border_style = "border: 1px solid #444444;"
             
-        # Highlight warna Biru jika tombol sedang diklik/aktif
+        # Aktif (Diklik)
         if i == st.session_state.active_day_idx:
-            border_style = "2px solid #0d6efd" 
-            
-        # [INJEKSI CSS TANGGUH] Memaksa Streamlit menerapkan background gradient
+            border_style = "border: 2px solid #0d6efd;" 
+
+        # --- TRIK INJEKSI KELAS UNIK ---
+        # Kita membuat nama kelas CSS unik untuk setiap tombol (btn-day-0, btn-day-1, dst.)
+        unique_class = f"btn-day-{i}"
+        
         custom_css += f"""
-            div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child({i+1}) button {{
+            /* Target tombol berdasarkan div pembungkus terdekat yang bisa kita temukan */
+            div:has(> .{unique_class}) button {{
                 {bg_style} !important;
-                color: {text_color} !important;
-                border: {border_style} !important;
+                {text_color} !important;
+                {border_style} !important;
                 height: 45px !important;
                 font-weight: bold !important;
                 border-radius: 8px !important;
@@ -358,7 +359,9 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
         """
         
         with day_cols[i]:
-            if st.button(day_label, key=f"btn_day_{i}", use_container_width=True):
+            # Kita injeksikan div tersembunyi dengan kelas unik TEPAT di atas tombol
+            st.markdown(f'<div class="{unique_class}"></div>', unsafe_allow_html=True)
+            if st.button(day_label, key=f"action_btn_day_{i}", use_container_width=True):
                 st.session_state.active_day_idx = i
                 st.rerun()
                 
