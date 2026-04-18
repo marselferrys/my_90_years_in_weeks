@@ -564,7 +564,7 @@ for year in range(target_age + 1):
         current_note = st.session_state.life_notes[year]
         hover_info = current_note if current_note.strip() != "" else "Belum ada catatan."
         
-        with st.popover("?", help=hover_info):
+        with st.popover(help=hover_info):
             st.session_state.life_notes[year] = st.text_area(
                 f"Catatan Umur {year}:", 
                 value=st.session_state.life_notes[year],
