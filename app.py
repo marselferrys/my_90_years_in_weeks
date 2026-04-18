@@ -39,6 +39,10 @@ if 'unsaved_changes' not in st.session_state:
     st.session_state.unsaved_changes = False
 if 'last_edit_time' not in st.session_state:
     st.session_state.last_edit_time = time.time()
+    
+# mengingat hari mana yang sedang Anda pilih
+if 'active_day_idx' not in st.session_state:
+    st.session_state.active_day_idx = 0
 
 # ==========================================
 # KONEKSI KE GOOGLE SHEETS
@@ -299,76 +303,58 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
 
     st.divider()
 
-    # 2. INPUT CATATAN HARIAN 
-    st.markdown("**🗓️ Catatan Harian (Dalam Minggu Terpilih)**")
+    # 2. PICKER KOTAK HARIAN INTERAKTIF
+    st.markdown("**🗓️ Pilih Hari & Edit Catatan**")
     
-    day_options_str = [(w_start + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(7)]
-    display_options = [(w_start + timedelta(days=i)).strftime('%A, %d %b') for i in range(7)]
+    # Hitung data waktu untuk progress harian
+    now = datetime.now()
+    real_today = now.date()
+    seconds_passed = (now.hour * 3600) + (now.minute * 60) + now.second
+    percent_current_day = (seconds_passed / 86400) * 100
+
+    # Render 7 Kolom sebagai Kotak yang Bisa Diklik
+    day_cols = st.columns(7)
     
-    col_d_sel, col_d_input, col_d_btn = st.columns([1.5, 2.5, 1])
-    with col_d_sel:
-        selected_day_idx = st.selectbox("Pilih Hari:", range(7), format_func=lambda x: display_options[x], label_visibility="collapsed")
-    
-    sel_day_str = day_options_str[selected_day_idx]
+    for i in range(7):
+        d_date = w_start + timedelta(days=i)
+        d_str = d_date.strftime('%Y-%m-%d')
+        d_note = st.session_state.daily_notes.get(d_str, "")
+        
+        # Penentuan Nama Hari untuk Label Tombol
+        day_label = d_date.strftime('%a') # Mon, Tue, dst.
+        
+        # Logika Warna & Progress (CSS dinamis akan diatur via st.markdown di bawah)
+        is_selected = (i == st.session_state.active_day_idx)
+        
+        # Tombol Interaktif: Jika diklik, update active_day_idx
+        if day_cols[i].button(day_label, key=f"btn_day_{i}", use_container_width=True):
+            st.session_state.active_day_idx = i
+            st.rerun()
+
+    # 3. AREA INPUT OTOMATIS BERDASARKAN KOTAK YANG DIPILIH
+    selected_day_idx = st.session_state.active_day_idx
+    sel_day_date = w_start + timedelta(days=selected_day_idx)
+    sel_day_str = sel_day_date.strftime('%Y-%m-%d')
     current_daily_note = st.session_state.daily_notes.get(sel_day_str, "")
+
+    # Menampilkan info detail hari yang terpilih secara otomatis
+    st.caption(f"📍 Mengedit: **{sel_day_date.strftime('%A, %d %B %Y')}** (Tahun {edit_year}, Minggu {edit_week})")
     
+    col_d_input, col_d_btn = st.columns([4, 1])
     with col_d_input:
-        # Mengubah key menjadi dinamis menggunakan sel_day_str
+        # Input Note yang otomatis terhubung dengan kotak yang diklik
         new_daily_note = st.text_input(
             "Tulis catatan hari ini:", 
             value=current_daily_note, 
             label_visibility="collapsed", 
             key=f"d_note_{sel_day_str}"
         )
-        
     with col_d_btn:
-        if st.button("Simpan Harian", use_container_width=True):
+        if st.button("Simpan Harian", use_container_width=True, type="primary"):
             st.session_state.daily_notes[sel_day_str] = new_daily_note
-            st.session_state.unsaved_changes = True            
-            st.session_state.last_edit_time = time.time()    
-            st.rerun()
-
-    # 3. RENDER VISUAL 7 KOTAK HARI (KUNING)
-    # Menghitung persentase berjalannya hari ini secara real-time
-    now = datetime.now()
-    real_today = now.date()
-    seconds_passed = (now.hour * 3600) + (now.minute * 60) + now.second
-    percent_current_day = (seconds_passed / 86400) * 100
-
-    daily_html = '<div class="daily-container">'
-    for i in range(7):
-        d_date = w_start + timedelta(days=i)
-        d_str = d_date.strftime('%Y-%m-%d')
-        d_note = st.session_state.daily_notes.get(d_str, "")
-        
-        tooltip = f"{d_date.strftime('%A, %d %b %Y')}"
-        if d_note: tooltip += f"&#10;📝 {d_note}"
-        
-        # Logika Status Hari (Lalu, Sekarang, Masa Depan)
-        if d_date < real_today:
-            bg_style = "background-color: #ffc107;" # Kuning Penuh
-        elif d_date == real_today:
-            bg_style = f"background: linear-gradient(to right, #ffc107 {percent_current_day}%, #ffffff {percent_current_day}%);"
-            tooltip = f"⏳ HARI INI ({percent_current_day:.0f}% Berlalu)&#10;" + tooltip
-        else:
-            bg_style = "background-color: #ffffff;" # Putih Kosong
-
-        # Menentukan garis tepi (border) yang kontras
-        if d_note:
-            # Garis warna Biru tebal jika ADA catatan, agar sangat kontras dengan kuning
-            border_style = "border: 2px solid #0d6efd;" 
-        else:
-            # Garis warna kuning gelap standar jika TIDAK ADA catatan
-            border_style = "border: 1px solid #e0a800;"
-
-        # Menggabungkan semua style CSS
-        style = f"{bg_style} {border_style}"
-        if i == selected_day_idx: style += " opacity: 0.6;" # Efek visual untuk hari yang sedang diklik
-        
-        daily_html += f'<div class="daily-box" style="{style}" title="{tooltip}"></div>'
-    daily_html += '</div>'
-    
-    st.markdown(daily_html, unsafe_allow_html=True)
+            st.session_state.unsaved_changes = True
+            st.session_state.last_edit_time = time.time()
+            st.success("Tersimpan!")
 
 
 # Injeksi CSS Custom
@@ -422,6 +408,21 @@ st.markdown("""
         min-height: 24px;
         height: 24px;
         margin-top: -2px;
+    }
+    /* Styling Tombol Harian agar seperti Kotak Grid */
+    div[data-testid="stHorizontalBlock"] > div:nth-child(n) button {
+        background-color: #ffc107 !important;
+        color: black !important;
+        border: 1px solid #e0a800 !important;
+        height: 45px !important;
+        font-weight: bold !important;
+        border-radius: 8px !important;
+    }
+    /* Highlight untuk kotak yang sedang aktif dipilih */
+    div[data-testid="stHorizontalBlock"] > div:nth-child(n) button:focus,
+    div[data-testid="stHorizontalBlock"] > div:nth-child(n) button:active {
+        border: 2px solid #0d6efd !important;
+        box-shadow: 0px 0px 10px rgba(13, 110, 253, 0.5) !important;
     }
 </style>
 """, unsafe_allow_html=True)
