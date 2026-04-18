@@ -347,7 +347,7 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
     now = datetime.now()
     real_today = now.date()
     
-    # [FITUR BARU] Kalkulasi Progress Bar Mingguan (Biru)    
+    # Kalkulasi Progress Bar Mingguan (Biru)    
     # Konversi w_start (date) ke datetime untuk perhitungan detik yang akurat (mulai 00:00:00)
     w_start_dt = datetime.combine(w_start, datetime.min.time())
     w_end_dt = w_start_dt + timedelta(days=7) # Batas akhir dari minggu yang dipilih
@@ -381,33 +381,14 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
             bg_color = "#262730" # Future: Gelap
             text_color = "white"
             
-        # Logika Border Standar & Aktif (Tidak lagi merah jika ada catatan)
+        # Logika Border Standar & Aktif
         border_style = "1px solid #444444"
         if i == st.session_state.active_day_idx:
             border_style = "2px solid #0d6efd" # Highlight Biru saat diklik
             
         unique_class = f"day-btn-{i}"
-        
-        # [FITUR BARU] Logika Titik Visual (Dot Indicator) di bawah teks
-        dot_css = ""
-        if d_note != "":
-            dot_css = f"""
-            div:has(> .{unique_class}) button::after {{
-                content: '';
-                position: absolute;
-                bottom: 4px; /* Jarak titik dari bawah kotak */
-                left: 50%;
-                transform: translateX(-50%);
-                width: 6px;
-                height: 6px;
-                background-color: #ff9800; /* Warna titik oranye senada dengan grid mingguan */
-                border-radius: 50%;
-            }}
-            """
-            
         custom_css += f"""
             div:has(> .{unique_class}) button {{
-                position: relative !important; /* Wajib agar titik tidak lari keluar kotak */
                 background-color: {bg_color} !important;
                 color: {text_color} !important;
                 border: {border_style} !important;
@@ -415,10 +396,20 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
                 font-weight: bold !important;
                 border-radius: 8px !important;
             }}
-            {dot_css}
         """
         
         with day_cols[i]:
+            # Render Titik Biru di atas tombol
+            # Jika ada catatan, render titik biru. Jika tidak, biarkan kosong.
+            dot_html = '<div style="width: 8px; height: 8px; background-color: #0d6efd; border-radius: 50%;"></div>' if d_note != "" else ''
+            
+            # Kontainer pembungkus setinggi 15px agar tinggi baris sejajar
+            st.markdown(
+                f'<div style="height: 15px; display: flex; justify-content: center; align-items: flex-end; padding-bottom: 4px;">{dot_html}</div>', 
+                unsafe_allow_html=True
+            )
+            
+            # Render tombol harian
             st.markdown(f'<div class="{unique_class}"></div>', unsafe_allow_html=True)
             if st.button(day_label, key=f"btn_day_act_{i}", use_container_width=True):
                 st.session_state.active_day_idx = i
