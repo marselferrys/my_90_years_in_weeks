@@ -306,7 +306,16 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
     # --- 2. PICKER KOTAK HARIAN INTERAKTIF ---
     st.markdown("**🗓️ Pilih Hari & Edit Catatan**")
     
-    real_today = datetime.now().date()
+    now = datetime.now()
+    real_today = now.date()
+    
+    # [FITUR BARU] Kalkulasi Progress Bar Mingguan (Biru)
+    # Menghitung berapa detik yang sudah berlalu sejak hari Senin jam 00:00 di minggu ini
+    days_into_week = (now.weekday() - w_start.weekday()) % 7
+    seconds_into_week = (days_into_week * 86400) + (now.hour * 3600) + (now.minute * 60) + now.second
+    # Total detik dalam 1 minggu = 7 hari * 24 jam * 60 menit * 60 detik = 604800
+    weekly_progress_percent = min(100, max(0, (seconds_into_week / 604800) * 100))
+
     day_cols = st.columns(7)
     custom_css = "<style>\n"
     
@@ -353,6 +362,17 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
                 
     custom_css += "</style>"
     st.markdown(custom_css, unsafe_allow_html=True)
+    
+    # [FITUR BARU] Render Progress Bar Mingguan (Biru)
+    # Progress bar ini dirender menggunakan HTML agar terlihat modern dan tipis
+    st.markdown(
+        f"""
+        <div style="width: 100%; background-color: #262730; border-radius: 4px; height: 6px; margin-top: 10px; margin-bottom: 20px;">
+            <div style="width: {weekly_progress_percent}%; background-color: #0d6efd; height: 100%; border-radius: 4px;"></div>
+        </div>
+        """, 
+        unsafe_allow_html=True
+    )
     
     # --- 3. AREA INPUT OTOMATIS BERDASARKAN KOTAK YANG DIPILIH ---
     selected_day_idx = st.session_state.active_day_idx
