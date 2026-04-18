@@ -3,6 +3,8 @@ import pandas as pd
 from datetime import date, timedelta
 import math
 from streamlit_gsheets import GSheetsConnection
+import time
+import streamlit.components.v1 as components
 
 # ==========================================
 # KONFIGURASI HALAMAN
@@ -30,6 +32,12 @@ if 'daily_notes' not in st.session_state:
 # Flag penanda agar tidak terus-menerus menarik data dari Google API
 if 'data_loaded' not in st.session_state:
     st.session_state.data_loaded = False
+
+# Pelacak status perubahan dan waktu
+if 'unsaved_changes' not in st.session_state:
+    st.session_state.unsaved_changes = False
+if 'last_edit_time' not in st.session_state:
+    st.session_state.last_edit_time = time.time()
 
 # ==========================================
 # KONEKSI KE GOOGLE SHEETS
@@ -140,6 +148,7 @@ with st.sidebar:
                     conn.update(worksheet="Sheet3", data=df_to_save_daily)
                 
                 st.cache_data.clear()
+                st.session_state.unsaved_changes = False
                 st.success("Seluruh data berhasil disimpan ke Google Sheets!")
 
         # Tombol untuk pull data dari cloud 
@@ -215,6 +224,36 @@ st.markdown(
 )
 
 # ==========================================
+# SISTEM PERINGATAN KEAMANAN DATA (UNSAVED CHANGES)
+# ==========================================
+if st.session_state.unsaved_changes:
+    # 1. Peringatan Berbasis Waktu di UI Streamlit
+    time_lapsed = time.time() - st.session_state.last_edit_time
+    
+    if time_lapsed > 300: # Jika lebih dari 300 detik (5 menit) belum disimpan ke cloud
+        st.error("⚠️ **Peringatan Kritis:** Anda memiliki catatan lokal yang belum diunggah ke Cloud selama lebih dari 5 menit. Segera tekan 'Simpan Catatan ke Cloud' di Sidebar agar data tidak hilang!")
+    else:
+        st.warning("💡 **Terdapat Perubahan:** Anda memiliki catatan yang belum diamankan ke Cloud Google Sheets.")
+
+    # 2. Injeksi JavaScript untuk Memblokir Tab Browser Ditutup
+    components.html("""
+        <script>
+            window.parent.onbeforeunload = function(e) {
+                var dialogText = 'Anda memiliki catatan hidup yang belum disimpan ke Cloud. Yakin ingin keluar?';
+                e.returnValue = dialogText;
+                return dialogText;
+            };
+        </script>
+    """, height=0, width=0)
+else:
+    # Hapus blokir jika data sudah aman di Cloud
+    components.html("""
+        <script>
+            window.parent.onbeforeunload = null;
+        </script>
+    """, height=0, width=0)
+
+# ==========================================
 # EDITOR CATATAN MINGGUAN & HARIAN
 # ==========================================
 st.write("") 
@@ -253,6 +292,8 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
     with col_w_btn:
         if st.button("Simpan Mingguan", use_container_width=True):
             st.session_state.weekly_notes[abs_edit_idx] = new_weekly_note
+            st.session_state.unsaved_changes = True            
+            st.session_state.last_edit_time = time.time()    
             st.rerun()
 
     st.divider()
@@ -282,6 +323,8 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
     with col_d_btn:
         if st.button("Simpan Harian", use_container_width=True):
             st.session_state.daily_notes[sel_day_str] = new_daily_note
+            st.session_state.unsaved_changes = True            
+            st.session_state.last_edit_time = time.time()    
             st.rerun()
 
     # 3. RENDER VISUAL 7 KOTAK HARI (KUNING)
