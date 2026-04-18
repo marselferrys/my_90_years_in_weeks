@@ -434,7 +434,7 @@ st.caption("Minggu 1 ➔ 52")
 # RENDER GRID KALENDER & TOMBOL CATATAN TAHUNAN
 # ==========================================
 for year in range(target_age + 1):
-    col_grid, col_action = st.columns([0.95, 0.05])
+    col_grid, col_spacer, col_action = st.columns([0.93, 0.02, 0.05])
     
     with col_grid:
         weeks_html = f'<div class="week-container"><div class="age-label">Thn {year:02d}</div>'
