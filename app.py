@@ -306,11 +306,8 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
     # 2. PICKER KOTAK HARIAN INTERAKTIF
     st.markdown("**🗓️ Pilih Hari & Edit Catatan**")
     
-    # Hitung data waktu untuk progress harian
     now = datetime.now()
     real_today = now.date()
-    seconds_passed = (now.hour * 3600) + (now.minute * 60) + now.second
-    percent_current_day = (seconds_passed / 86400) * 100
 
     day_cols = st.columns(7)
     custom_css = "<style>\n"
@@ -321,37 +318,35 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
         d_note = st.session_state.daily_notes.get(d_str, "")
         day_label = d_date.strftime('%a')
         
-        # --- LOGIKA VISUAL DINAMIS ---
-        if d_date < real_today:
-            bg_style = "background: #ffc107;" # Masa lalu (Kuning Penuh)
-            text_color = "color: black;"
-        elif d_date == real_today:
-            bg_style = f"background: linear-gradient(to right, #ffc107 {percent_current_day}%, #262730 {percent_current_day}%);" # Hari ini (Gradasi)
-            text_color = "color: white;"
+        # --- LOGIKA WARNA SOLID ---
+        if d_date <= real_today:
+            # Masa Lalu & Hari Ini: Kuning Solid
+            bg_color = "#ffc107"
+            text_color = "black"
         else:
-            bg_style = "background: #262730;" # Masa depan (Abu-abu Gelap)
-            text_color = "color: white;"
+            # Masa Depan: Abu-abu Gelap (Theme Match)
+            bg_color = "#262730"
+            text_color = "white"
             
-        # Logika Border
+        # Logika Garis Tepi (Border)
         if d_note != "":
-            border_style = "border: 2px solid #d32f2f;" # Merah jika ada catatan
+            # Merah jika ADA catatan
+            border_style = "2px solid #d32f2f" 
         else:
-            border_style = "border: 1px solid #444444;"
+            # Standar jika KOSONG
+            border_style = "1px solid #444444"
             
-        # Aktif (Diklik)
+        # Highlight Biru jika sedang dipilih/aktif
         if i == st.session_state.active_day_idx:
-            border_style = "border: 2px solid #0d6efd;" 
+            border_style = "2px solid #0d6efd" 
 
-        # --- TRIK INJEKSI KELAS UNIK ---
-        # Kita membuat nama kelas CSS unik untuk setiap tombol (btn-day-0, btn-day-1, dst.)
-        unique_class = f"btn-day-{i}"
-        
+        # CSS Injection menggunakan kelas unik agar tidak meleset
+        unique_class = f"day-btn-{i}"
         custom_css += f"""
-            /* Target tombol berdasarkan div pembungkus terdekat yang bisa kita temukan */
             div:has(> .{unique_class}) button {{
-                {bg_style} !important;
-                {text_color} !important;
-                {border_style} !important;
+                background-color: {bg_color} !important;
+                color: {text_color} !important;
+                border: {border_style} !important;
                 height: 45px !important;
                 font-weight: bold !important;
                 border-radius: 8px !important;
@@ -359,9 +354,8 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
         """
         
         with day_cols[i]:
-            # Kita injeksikan div tersembunyi dengan kelas unik TEPAT di atas tombol
             st.markdown(f'<div class="{unique_class}"></div>', unsafe_allow_html=True)
-            if st.button(day_label, key=f"action_btn_day_{i}", use_container_width=True):
+            if st.button(day_label, key=f"btn_day_act_{i}", use_container_width=True):
                 st.session_state.active_day_idx = i
                 st.rerun()
                 
