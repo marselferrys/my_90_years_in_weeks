@@ -5,6 +5,7 @@ import math
 from streamlit_gsheets import GSheetsConnection
 import time
 import streamlit.components.v1 as components
+from datetime import date, timedelta, datetime
 
 # ==========================================
 # KONFIGURASI HALAMAN
@@ -282,7 +283,7 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
     current_weekly_note = st.session_state.weekly_notes.get(abs_edit_idx, "")
     col_w_input, col_w_btn = st.columns([4, 1])
     with col_w_input:
-        # [PERBAIKAN] Mengubah key menjadi dinamis menggunakan abs_edit_idx
+        # Mengubah key menjadi dinamis menggunakan abs_edit_idx
         new_weekly_note = st.text_input(
             "Tulis catatan minggu ini:", 
             value=current_weekly_note, 
@@ -298,7 +299,7 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
 
     st.divider()
 
-    # 2. INPUT CATATAN HARIAN [FITUR BARU]
+    # 2. INPUT CATATAN HARIAN 
     st.markdown("**🗓️ Catatan Harian (Dalam Minggu Terpilih)**")
     
     day_options_str = [(w_start + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(7)]
@@ -328,6 +329,12 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
             st.rerun()
 
     # 3. RENDER VISUAL 7 KOTAK HARI (KUNING)
+    # Menghitung persentase berjalannya hari ini secara real-time
+    now = datetime.now()
+    real_today = now.date()
+    seconds_passed = (now.hour * 3600) + (now.minute * 60) + now.second
+    percent_current_day = (seconds_passed / 86400) * 100
+
     daily_html = '<div class="daily-container">'
     for i in range(7):
         d_date = w_start + timedelta(days=i)
@@ -337,10 +344,26 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
         tooltip = f"{d_date.strftime('%A, %d %b %Y')}"
         if d_note: tooltip += f"&#10;📝 {d_note}"
         
-        # Style kotak kuning
-        style = "background-color: #ffc107; border-color: #e0a800;"
-        if d_note: style += " border-width: 2px; border-color: #d32f2f;" # Border merah tebal jika ada catatan
-        if i == selected_day_idx: style += " opacity: 0.5;" # Redupkan sedikit untuk hari yang sedang dipilih
+        # Logika Status Hari (Lalu, Sekarang, Masa Depan)
+        if d_date < real_today:
+            bg_style = "background-color: #ffc107;" # Kuning Penuh
+        elif d_date == real_today:
+            bg_style = f"background: linear-gradient(to right, #ffc107 {percent_current_day}%, #ffffff {percent_current_day}%);"
+            tooltip = f"⏳ HARI INI ({percent_current_day:.0f}% Berlalu)&#10;" + tooltip
+        else:
+            bg_style = "background-color: #ffffff;" # Putih Kosong
+
+        # Menentukan garis tepi (border) yang kontras
+        if d_note:
+            # Garis warna Biru tebal jika ADA catatan, agar sangat kontras dengan kuning
+            border_style = "border: 2px solid #0d6efd;" 
+        else:
+            # Garis warna kuning gelap standar jika TIDAK ADA catatan
+            border_style = "border: 1px solid #e0a800;"
+
+        # Menggabungkan semua style CSS
+        style = f"{bg_style} {border_style}"
+        if i == selected_day_idx: style += " opacity: 0.6;" # Efek visual untuk hari yang sedang diklik
         
         daily_html += f'<div class="daily-box" style="{style}" title="{tooltip}"></div>'
     daily_html += '</div>'
