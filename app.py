@@ -312,24 +312,65 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
     seconds_passed = (now.hour * 3600) + (now.minute * 60) + now.second
     percent_current_day = (seconds_passed / 86400) * 100
 
-    # Render 7 Kolom sebagai Kotak yang Bisa Diklik
     day_cols = st.columns(7)
+    custom_css = "<style>\n"
     
     for i in range(7):
         d_date = w_start + timedelta(days=i)
         d_str = d_date.strftime('%Y-%m-%d')
         d_note = st.session_state.daily_notes.get(d_str, "")
+        day_label = d_date.strftime('%a')
         
-        # Penentuan Nama Hari untuk Label Tombol
-        day_label = d_date.strftime('%a') # Mon, Tue, dst.
+        # --- LOGIKA VISUAL DINAMIS ---
+        # 1. Background (Past, Present, Future)
+        if d_date < real_today:
+            bg_style = "#ffc107" # Past: Kuning Penuh
+            text_color = "black"
+        elif d_date == real_today:
+            bg_style = f"linear-gradient(to right, #ffc107 {percent_current_day}%, #ffffff {percent_current_day}%)"
+            text_color = "black"
+        else:
+            bg_style = "#ffffff" # Future: Putih
+            text_color = "#444444"
+            
+        # 2. Border (Merah jika ada catatan)
+        if d_note != "":
+            border_style = "2px solid #d32f2f" # Ada catatan
+        else:
+            border_style = "1px solid #cccccc" if d_date > real_today else "1px solid #e0a800"
+            
+        # 3. Highlight jika tombol diklik (Aktif)
+        box_shadow = "none"
+        if i == st.session_state.active_day_idx:
+            border_style = "2px solid #0d6efd" # Override ke Biru saat diedit
+            box_shadow = "0px 0px 10px rgba(13, 110, 253, 0.6)"
+            
+        # Injeksi CSS Spesifik untuk Kolom ini
+        custom_css += f"""
+            div[data-testid="column"]:has(#marker_day_{i}) button {{
+                background: {bg_style} !important;
+                color: {text_color} !important;
+                border: {border_style} !important;
+                box-shadow: {box_shadow} !important;
+                height: 45px !important;
+                font-weight: bold !important;
+                border-radius: 8px !important;
+                transition: transform 0.1s;
+            }}
+            div[data-testid="column"]:has(#marker_day_{i}) button:hover {{
+                transform: scale(1.05);
+            }}
+        """
         
-        # Logika Warna & Progress (CSS dinamis akan diatur via st.markdown di bawah)
-        is_selected = (i == st.session_state.active_day_idx)
-        
-        # Tombol Interaktif: Jika diklik, update active_day_idx
-        if day_cols[i].button(day_label, key=f"btn_day_{i}", use_container_width=True):
-            st.session_state.active_day_idx = i
-            st.rerun()
+        with day_cols[i]:
+            # Penanda (marker) rahasia agar CSS tahu tombol mana yang harus diwarnai
+            st.markdown(f'<span id="marker_day_{i}"></span>', unsafe_allow_html=True)
+            if st.button(day_label, key=f"btn_day_{i}", use_container_width=True):
+                st.session_state.active_day_idx = i
+                st.rerun()
+                
+    custom_css += "</style>"
+    st.markdown(custom_css, unsafe_allow_html=True)
 
     # 3. AREA INPUT OTOMATIS BERDASARKAN KOTAK YANG DIPILIH
     selected_day_idx = st.session_state.active_day_idx
@@ -408,21 +449,6 @@ st.markdown("""
         min-height: 24px;
         height: 24px;
         margin-top: -2px;
-    }
-    /* Styling Tombol Harian agar seperti Kotak Grid */
-    div[data-testid="stHorizontalBlock"] > div:nth-child(n) button {
-        background-color: #ffc107 !important;
-        color: black !important;
-        border: 1px solid #e0a800 !important;
-        height: 45px !important;
-        font-weight: bold !important;
-        border-radius: 8px !important;
-    }
-    /* Highlight untuk kotak yang sedang aktif dipilih */
-    div[data-testid="stHorizontalBlock"] > div:nth-child(n) button:focus,
-    div[data-testid="stHorizontalBlock"] > div:nth-child(n) button:active {
-        border: 2px solid #0d6efd !important;
-        box-shadow: 0px 0px 10px rgba(13, 110, 253, 0.5) !important;
     }
 </style>
 """, unsafe_allow_html=True)
