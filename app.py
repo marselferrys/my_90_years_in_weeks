@@ -232,15 +232,53 @@ st.markdown(
 # SISTEM PERINGATAN KEAMANAN DATA (UNSAVED CHANGES)
 # ==========================================
 if st.session_state.unsaved_changes:
-    # 1. Peringatan Berbasis Waktu di UI Streamlit
+    # 1. Hitung waktu jeda
     time_lapsed = time.time() - st.session_state.last_edit_time
     
-    if time_lapsed > 300: # Jika lebih dari 300 detik (5 menit) belum disimpan ke cloud
-        st.error("⚠️ **Peringatan Kritis:** Anda memiliki catatan lokal yang belum diunggah ke Cloud selama lebih dari 5 menit. Segera tekan 'Simpan Catatan ke Cloud' di Sidebar agar data tidak hilang!")
+    # Menentukan desain Pop-up berdasarkan waktu
+    if time_lapsed > 300: # Lebih dari 5 menit
+        bg_color = "#dc3545" # Merah
+        text_color = "white"
+        icon = "⚠️"
+        msg = "<b>Peringatan Kritis:</b> Anda memiliki catatan lokal yang belum diunggah ke Cloud selama > 5 menit. Segera simpan!"
     else:
-        st.warning("💡 **Terdapat Perubahan:** Anda memiliki catatan yang belum diamankan ke Cloud Google Sheets.")
+        bg_color = "#ffc107" # Kuning
+        text_color = "black"
+        icon = "💡"
+        msg = "<b>Terdapat Perubahan:</b> Anda memiliki catatan yang belum diamankan ke Cloud."
 
-    # 2. Injeksi JavaScript untuk Memblokir Tab Browser Ditutup
+    # 2. Render Floating Pop-up Banner dengan Animasi HTML/CSS
+    st.markdown(f"""
+        <style>
+            .floating-alert {{
+                position: fixed;
+                top: 60px; /* Muncul sedikit di bawah header bawaan Streamlit */
+                left: 50%;
+                transform: translateX(-50%);
+                background-color: {bg_color};
+                color: {text_color};
+                padding: 12px 24px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+                z-index: 999999;
+                font-size: 15px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                animation: slideDown 0.4s ease-out forwards;
+            }}
+            @keyframes slideDown {{
+                from {{ top: -50px; opacity: 0; }}
+                to {{ top: 60px; opacity: 1; }}
+            }}
+        </style>
+        <div class="floating-alert">
+            <span style="font-size: 20px;">{icon}</span>
+            <span>{msg}</span>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # 3. Injeksi JavaScript untuk Memblokir Tab Browser Ditutup
     components.html("""
         <script>
             window.parent.onbeforeunload = function(e) {
@@ -257,7 +295,7 @@ else:
             window.parent.onbeforeunload = null;
         </script>
     """, height=0, width=0)
-
+    
 # ==========================================
 # EDITOR CATATAN MINGGUAN & HARIAN
 # ==========================================
