@@ -525,7 +525,7 @@ st.caption("Minggu 1 ➔ 52")
 # ==========================================
 for year in range(target_age + 1):
     # kolom tengah (0.02) sebagai ruang kosong/spacer
-    col_grid, col_spacer, col_action = st.columns([0.93, 0.20, 0.10])
+    col_grid, col_spacer, col_action = st.columns([0.93, 0.20, 0.1])
     
     with col_grid:
         weeks_html = f'<div class="week-container"><div class="age-label">Thn {year:02d}</div>'
