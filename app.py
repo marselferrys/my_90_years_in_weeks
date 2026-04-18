@@ -309,12 +309,22 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
     now = datetime.now()
     real_today = now.date()
     
-    # [FITUR BARU] Kalkulasi Progress Bar Mingguan (Biru)
-    # Menghitung berapa detik yang sudah berlalu sejak hari Senin jam 00:00 di minggu ini
-    days_into_week = (now.weekday() - w_start.weekday()) % 7
-    seconds_into_week = (days_into_week * 86400) + (now.hour * 3600) + (now.minute * 60) + now.second
-    # Total detik dalam 1 minggu = 7 hari * 24 jam * 60 menit * 60 detik = 604800
-    weekly_progress_percent = min(100, max(0, (seconds_into_week / 604800) * 100))
+    # [FITUR BARU] Kalkulasi Progress Bar Mingguan (Biru)    
+    # Konversi w_start (date) ke datetime untuk perhitungan detik yang akurat (mulai 00:00:00)
+    w_start_dt = datetime.combine(w_start, datetime.min.time())
+    w_end_dt = w_start_dt + timedelta(days=7) # Batas akhir dari minggu yang dipilih
+    
+    if now >= w_end_dt:
+        # Jika waktu sekarang sudah melewati minggu yang sedang dilihat (Masa Lalu)
+        weekly_progress_percent = 100.0
+    elif now < w_start_dt:
+        # Jika waktu sekarang belum mencapai minggu yang sedang dilihat (Masa Depan)
+        weekly_progress_percent = 0.0
+    else:
+        # Jika minggu yang dilihat adalah minggu yang sedang berjalan saat ini
+        seconds_passed_in_week = (now - w_start_dt).total_seconds()
+        # Total detik dalam 1 minggu = 7 hari * 24 jam * 60 menit * 60 detik = 604800
+        weekly_progress_percent = (seconds_passed_in_week / 604800.0) * 100.0
 
     day_cols = st.columns(7)
     custom_css = "<style>\n"
