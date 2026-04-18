@@ -243,7 +243,13 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
     current_weekly_note = st.session_state.weekly_notes.get(abs_edit_idx, "")
     col_w_input, col_w_btn = st.columns([4, 1])
     with col_w_input:
-        new_weekly_note = st.text_input("Tulis catatan minggu ini:", value=current_weekly_note, label_visibility="collapsed", key="w_note_input")
+        # [PERBAIKAN] Mengubah key menjadi dinamis menggunakan abs_edit_idx
+        new_weekly_note = st.text_input(
+            "Tulis catatan minggu ini:", 
+            value=current_weekly_note, 
+            label_visibility="collapsed", 
+            key=f"w_note_{abs_edit_idx}" 
+        )
     with col_w_btn:
         if st.button("Simpan Mingguan", use_container_width=True):
             st.session_state.weekly_notes[abs_edit_idx] = new_weekly_note
@@ -265,7 +271,14 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
     current_daily_note = st.session_state.daily_notes.get(sel_day_str, "")
     
     with col_d_input:
-        new_daily_note = st.text_input("Tulis catatan hari ini:", value=current_daily_note, label_visibility="collapsed", key="d_note_input")
+        # Mengubah key menjadi dinamis menggunakan sel_day_str
+        new_daily_note = st.text_input(
+            "Tulis catatan hari ini:", 
+            value=current_daily_note, 
+            label_visibility="collapsed", 
+            key=f"d_note_{sel_day_str}"
+        )
+        
     with col_d_btn:
         if st.button("Simpan Harian", use_container_width=True):
             st.session_state.daily_notes[sel_day_str] = new_daily_note
