@@ -304,7 +304,7 @@ with st.expander("📝 Tambah/Edit Catatan Spesifik Per Minggu & Hari", expanded
     col_d, col_y, col_w = st.columns([1.5, 1, 1])
     
     with col_d:
-        selected_date = st.date_input("Pilih Tanggal Acuan:", value=date.today())
+        selected_date = st.date_input("Pilih Tanggal Mencatat:", value=date.today())
         
     delta_selected = (selected_date - birth_date).days
     auto_abs_week = max(0, delta_selected // 7)
